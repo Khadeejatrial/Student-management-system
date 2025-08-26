@@ -1,15 +1,17 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionMiddleware> _logger;
 
-    public ExceptionMiddleware(RequestDelegate next)
+    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -20,7 +22,7 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "An unhandled exception occurred.");
+            _logger.LogError(ex, "Unhandled exception occurred. TraceId: {TraceId}", context.TraceIdentifier);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -29,12 +31,18 @@ public class ExceptionMiddleware
     {
         var response = context.Response;
         response.ContentType = "application/json";
-        response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+        
+        response.StatusCode = ex is ArgumentException
+            ? (int)HttpStatusCode.BadRequest
+            : (int)HttpStatusCode.InternalServerError;
 
         var errorResponse = new
         {
             StatusCode = response.StatusCode,
-            Message = "A bad request occurred. Please check your input.",
+            Message = response.StatusCode == 400
+                ? ex.Message
+                : "An unexpected error occurred. Please contact support.",
             TraceId = context.TraceIdentifier
         };
 
