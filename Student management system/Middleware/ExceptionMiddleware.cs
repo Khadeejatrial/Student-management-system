@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
+namespace StudentManagement.Middleware;
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;

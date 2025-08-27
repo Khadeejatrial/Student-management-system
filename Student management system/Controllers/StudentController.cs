@@ -1,29 +1,111 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
+using StudentManagement.Models;
 
 namespace StudentManagement.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class StudentController : ControllerBase
+    public class StudentsController : ControllerBase
     {
-        private readonly ILogger<StudentController> _logger;
+        private static readonly List<Student> _students = new();
+        private readonly ILogger<StudentsController> _logger;
 
-        public StudentController(ILogger<StudentController> logger)
+        public StudentsController(ILogger<StudentsController> logger)
         {
             _logger = logger;
         }
 
-        [HttpGet("get-student/{id}")]
-        public IActionResult GetStudent(int id)
+        
+        [HttpPost]
+        public IActionResult CreateStudent([FromBody] Student student)
         {
-            if (id <= 0)
+            if (string.IsNullOrWhiteSpace(student.Name) || student.Age <= 0)
             {
-                _logger.LogWarning("Invalid student ID received: {Id}", id);
-                throw new ArgumentException("Student ID must be greater than zero.");
+                _logger.LogWarning("Invalid student data submitted");
+                return BadRequest(new { Message = "Name cannot be empty and Age must be greater than zero." });
             }
 
-            _logger.LogInformation("Returning student details for ID: {Id}", id);
-            return Ok(new { Id = id, Name = "John Doe" });
+            student.Id = _students.Count + 1;
+            _students.Add(student);
+
+            _logger.LogInformation("Student created with ID: {Id}", student.Id);
+
+            return CreatedAtAction(nameof(GetStudentById), new { id = student.Id }, student);
+        }
+
+        
+        [HttpGet]
+        public IActionResult GetAllStudents()
+        {
+            _logger.LogInformation("Retrieved all students");
+            return Ok(_students);
+        }
+
+       
+        [HttpGet("{id}")]
+        public IActionResult GetStudentById(int id)
+        {
+            var student = _students.FirstOrDefault(s => s.Id == id);
+            if (student == null)
+            {
+                _logger.LogWarning("Student with ID {Id} not found", id);
+                return NotFound(new { Message = $"Student with ID {id} not found." });
+            }
+            return Ok(student);
+        }
+
+        
+        [HttpPut("{id}")]
+        public IActionResult UpdateStudent(int id, [FromBody] Student updatedStudent)
+        {
+            var student = _students.FirstOrDefault(s => s.Id == id);
+            if (student == null)
+            {
+                return NotFound(new { Message = $"Student with ID {id} not found." });
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedStudent.Name) || updatedStudent.Age <= 0)
+            {
+                return BadRequest(new { Message = "Name cannot be empty and Age must be greater than zero." });
+            }
+
+            student.Name = updatedStudent.Name;
+            student.Age = updatedStudent.Age;
+            student.Department = updatedStudent.Department;
+
+            _logger.LogInformation("Student with ID {Id} updated", id);
+            return Ok(student);
+        }
+
+        
+        [HttpPatch("{id}")]
+        public IActionResult PartiallyUpdateStudent(int id, [FromBody] JsonPatchDocument<Student> patchDoc)
+        {
+            var student = _students.FirstOrDefault(s => s.Id == id);
+            if (student == null)
+            {
+                return NotFound(new { Message = $"Student with ID {id} not found." });
+            }
+
+            patchDoc.ApplyTo(student);
+            _logger.LogInformation("Student with ID {Id} partially updated", id);
+            return Ok(student); 
+        }
+
+       
+        [HttpDelete("{id}")]
+        public IActionResult DeleteStudent(int id)
+        {
+            var student = _students.FirstOrDefault(s => s.Id == id);
+            if (student == null)
+            {
+                return NotFound(new { Message = $"Student with ID {id} not found." });
+            }
+
+            _students.Remove(student);
+            _logger.LogInformation("Student with ID {Id} deleted", id);
+            return NoContent();
         }
     }
 }

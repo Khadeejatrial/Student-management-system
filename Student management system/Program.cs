@@ -1,15 +1,17 @@
 using Serilog;
+using StudentManagement.Middleware;
 
 try
 {
-    var builder = WebApplication.CreateBuilder(args);
-
     Log.Logger = new LoggerConfiguration()
-        .ReadFrom.Configuration(builder.Configuration)
+        .ReadFrom.Configuration(new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build())
         .CreateLogger();
 
-    Log.Information("Starting up the application...");
+    Log.Information("Starting application...");
 
+    var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog();
 
     builder.Services.AddControllers();
@@ -34,7 +36,7 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application failed to start.");
+    Log.Fatal(ex, "Application startup failed.");
 }
 finally
 {
