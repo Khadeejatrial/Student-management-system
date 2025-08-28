@@ -1,4 +1,4 @@
-﻿namespace StudentManagement.Models
+﻿namespace SMS.Domain.Model
 {
     public class Student
     {

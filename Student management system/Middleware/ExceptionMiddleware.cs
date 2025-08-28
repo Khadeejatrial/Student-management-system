@@ -1,53 +1,40 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 
-namespace StudentManagement.Middleware;
-public class ExceptionMiddleware
+namespace Student_management_system.Middleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionMiddleware> _logger;
-
-    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
+    public class ExceptionMiddleware
     {
-        _next = next;
-        _logger = logger;
-    }
+        private readonly RequestDelegate _next;
+        private readonly ILogger<ExceptionMiddleware> _logger;
 
-    public async Task InvokeAsync(HttpContext context)
-    {
-        try
+        public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
         {
-            await _next(context);
+            _next = next;
+            _logger = logger;
         }
-        catch (Exception ex)
+
+        public async Task InvokeAsync(HttpContext context)
         {
-            _logger.LogError(ex, "Unhandled exception occurred. TraceId: {TraceId}", context.TraceIdentifier);
-            await HandleExceptionAsync(context, ex);
+            try
+            {
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception occurred.");
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                context.Response.ContentType = "application/json";
+
+                var errorResponse = new
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = "An unexpected error occurred.",
+                    TraceId = context.TraceIdentifier
+                };
+
+                await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
+            }
         }
-    }
-
-    private static Task HandleExceptionAsync(HttpContext context, Exception ex)
-    {
-        var response = context.Response;
-        response.ContentType = "application/json";
-
-        
-        response.StatusCode = ex is ArgumentException
-            ? (int)HttpStatusCode.BadRequest
-            : (int)HttpStatusCode.InternalServerError;
-
-        var errorResponse = new
-        {
-            StatusCode = response.StatusCode,
-            Message = response.StatusCode == 400
-                ? ex.Message
-                : "An unexpected error occurred. Please contact support.",
-            TraceId = context.TraceIdentifier
-        };
-
-        var json = JsonSerializer.Serialize(errorResponse);
-        return response.WriteAsync(json);
     }
 }

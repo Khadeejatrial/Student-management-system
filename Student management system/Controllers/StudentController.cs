@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using StudentManagement.Models;
+using SMS.Domain.Model;
 
 namespace StudentManagement.Controllers
 {
