@@ -1,16 +1,28 @@
+using Microsoft.EntityFrameworkCore;
+using SMS.Infrastructure;
+using SMS.Services.Interface;
+using SMS.Services.Implementations;
 using Serilog;
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    Log.Logger = new LoggerConfiguration()
-        .ReadFrom.Configuration(builder.Configuration)
-        .CreateLogger();
+    // Configure Serilog for startup errors
+    builder.Host.UseSerilog((context, services, configuration) =>
+        configuration.ReadFrom.Configuration(context.Configuration)
+                     .ReadFrom.Services(services)
+                     .Enrich.FromLogContext()
+                     .WriteTo.Console());
 
-    Log.Information("Starting up the application...");
+    // Add DbContext
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-    builder.Host.UseSerilog();
+
+
+    // Add Services
+    builder.Services.AddScoped<IStudentApplication, StudentApplication>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
@@ -25,7 +37,6 @@ try
     }
 
     app.UseMiddleware<ExceptionMiddleware>();
-
     app.UseHttpsRedirection();
     app.UseAuthorization();
     app.MapControllers();
@@ -34,9 +45,11 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application failed to start.");
+    // Log startup errors using Serilog
+    Log.Fatal(ex, "Application failed to start correctly.");
 }
 finally
 {
+    // Ensure logs are flushed before application exits
     Log.CloseAndFlush();
 }

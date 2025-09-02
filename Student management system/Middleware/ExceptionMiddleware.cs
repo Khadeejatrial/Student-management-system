@@ -22,7 +22,15 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception occurred. TraceId: {TraceId}", context.TraceIdentifier);
+            _logger.LogError(ex,
+                "Unhandled exception occurred. TraceId: {TraceId}, Path: {Path}, Method: {Method}, Message: {Message}, StackTrace: {StackTrace}",
+            context.TraceIdentifier,
+            context.Request.Path,
+            context.Request.Method,
+            ex.Message,
+            ex.StackTrace);
+
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -32,7 +40,6 @@ public class ExceptionMiddleware
         var response = context.Response;
         response.ContentType = "application/json";
 
-        
         response.StatusCode = ex is ArgumentException
             ? (int)HttpStatusCode.BadRequest
             : (int)HttpStatusCode.InternalServerError;
@@ -43,7 +50,8 @@ public class ExceptionMiddleware
             Message = response.StatusCode == 400
                 ? ex.Message
                 : "An unexpected error occurred. Please contact support.",
-            TraceId = context.TraceIdentifier
+            TraceId = context.TraceIdentifier,
+            Path = context.Request.Path
         };
 
         var json = JsonSerializer.Serialize(errorResponse);

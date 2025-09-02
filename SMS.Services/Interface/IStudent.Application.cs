@@ -1,12 +1,16 @@
-﻿using System;
+﻿using SMS.Domain.DTOs;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SMS.Services.Interface
 {
-    internal interface IStudent
+    public interface IStudentApplication
     {
+        Task<IEnumerable<StudentDto>> GetAllStudentsAsync();
+        Task<StudentDto?> GetStudentByIdAsync(int id);
+        Task<StudentDto?> CreateStudentAsync(StudentDto student);
+        Task<StudentDto?> UpdateStudentAsync(int id, StudentDto student);
+        Task<StudentDto> CreateStudentWithCoursesAsync(StudentCreateDto dto);
+        Task<bool> DeleteStudentAsync(int id);
     }
 }
