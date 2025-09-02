@@ -111,7 +111,7 @@ namespace SMS.Services.Implementations
 
             if (entity == null) return null;
 
-            // Update basic fields
+            
             entity.FirstName = student.FirstName;
             entity.LastName = student.LastName;
             entity.Email = student.Email;
@@ -119,30 +119,36 @@ namespace SMS.Services.Implementations
             entity.Gender = student.Gender;
             entity.UpdatedAt = DateTime.UtcNow;
 
-            // Clear and re-add Enrollments or update existing
-            entity.Enrollments.Clear();
+            
+            
 
             foreach (var e in student.Enrollments)
             {
-                var enrollment = new Enrollment
+                var enrollment = entity.Enrollments.FirstOrDefault(en => en.StudentId == id && en.CourseId == e.CourseId);
+                if (enrollment != null)
                 {
-                    EnrollmentId = e.EnrollmentId,
-                    CourseId = e.CourseId,
-                    StudentId = id,
-                    EnrollmentDate = DateTime.Now,
-                    IsActive = e.IsActive
-                };
-
-                if (e.Course != null)
-                {
-                    enrollment.Course = new Course
-                    {
-                        CourseId = e.Course.CourseId,
-                        CourseName = e.Course.CourseName
-                    };
+                    enrollment.EnrollmentDate = e.EnrollmentDate ?? enrollment.EnrollmentDate;
+                    enrollment.IsActive = e.IsActive;
+                    
                 }
+                else
+                {
+                    enrollment = new Enrollment
+                    {
 
-                entity.Enrollments.Add(enrollment);
+                        CourseId = e.CourseId,
+                        StudentId = id,
+                        EnrollmentDate = DateTime.Now,
+                        IsActive = e.IsActive
+                    };
+                    entity.Enrollments.Add(enrollment);
+
+                }
+                    
+
+                
+
+                
             }
 
             await _context.SaveChangesAsync();
