@@ -9,7 +9,7 @@ namespace SMS.Services.Interface
         Task<IEnumerable<StudentDto>> GetAllStudentsAsync();
         Task<StudentDto?> GetStudentByIdAsync(int id);
         Task<StudentDto?> CreateStudentAsync(StudentDto student);
-        Task<StudentDto?> UpdateStudentAsync(int id, StudentDto student);
+        Task<StudentDto?> UpdateStudentAsync(int id, StudentUpdateDto student);
         Task<StudentDto> CreateStudentWithCoursesAsync(StudentCreateDto dto);
         Task<bool> DeleteStudentAsync(int id);
     }

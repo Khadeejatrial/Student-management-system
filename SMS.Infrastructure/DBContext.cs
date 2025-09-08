@@ -7,17 +7,13 @@ namespace SMS.Infrastructure
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Student> Students { get; set; }
-        public DbSet<Course> Courses { get; set; }
-        public DbSet<Enrollment> Enrollments { get; set; }
+       
+        public virtual DbSet<Student> Students { get; set; } = null!;
+        public virtual DbSet<Course> Courses { get; set; } = null!;
+        public virtual DbSet<Enrollment> Enrollments { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-
-            modelBuilder.Entity<Student>()
-                .Property(s => s.StudentId);
-                
-
             modelBuilder.Entity<Student>()
                 .HasIndex(s => s.Email)
                 .IsUnique();
@@ -27,11 +23,9 @@ namespace SMS.Infrastructure
                 .HasMaxLength(1)
                 .IsRequired();
 
-            
             modelBuilder.Entity<Course>()
                 .HasKey(c => c.CourseId);
 
-            
             modelBuilder.Entity<Enrollment>()
                 .HasKey(e => e.EnrollmentId);
 
@@ -49,12 +43,8 @@ namespace SMS.Infrastructure
                 .WithMany(c => c.Enrollments)
                 .HasForeignKey(e => e.CourseId);
 
-
-
-
             modelBuilder.Entity<Student>()
                 .ToTable(t => t.HasCheckConstraint("CK_Student_Gender", "Gender IN ('M', 'F', 'O')"));
-
         }
     }
 }

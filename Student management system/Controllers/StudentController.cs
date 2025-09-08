@@ -14,7 +14,7 @@ namespace Student_management_system.Controllers
             _service = service;
         }
 
-        // Get all students
+        
         [HttpGet]
         public async Task<IActionResult> GetAllStudents()
         {
@@ -22,7 +22,6 @@ namespace Student_management_system.Controllers
             return Ok(students);
         }
 
-        // Get student by ID
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetStudent(int id)
         {
@@ -33,7 +32,7 @@ namespace Student_management_system.Controllers
             return Ok(student);
         }
 
-        // Create new student
+
         [HttpPost]
         public async Task<IActionResult> CreateStudent([FromBody] StudentCreateDto studentDto)
         {
@@ -41,14 +40,15 @@ namespace Student_management_system.Controllers
             return CreatedAtAction(nameof(GetStudent), new { id = result.StudentId }, result);
         }
 
-        // Update student
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateStudent(int id, [FromBody] StudentDto student)
+        public async Task<IActionResult> UpdateStudent(int id, [FromBody] StudentUpdateDto student)
         {
             var updatedStudent = await _service.UpdateStudentAsync(id, student);
             if (updatedStudent == null) return NotFound();
             return Ok(updatedStudent);
         }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStudent(int id)
         {

@@ -48,4 +48,27 @@ namespace SMS.Domain.DTOs
         public DateTime? EnrollmentDate { get; set; }
         public bool IsActive { get; set; } = true;
     }
+
+    public class StudentUpdateDto
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+        public DateTime DateOfBirth { get; set; }
+        public string? Gender { get; set; }
+        public List<EnrollmentUpdateDto> Enrollments { get; set; } = new List<EnrollmentUpdateDto>();
+    }
+
+    public class EnrollmentUpdateDto
+    {
+        public int EnrollmentId { get; set; }
+        public CourseUpdateDto? Course { get; set; }
+        public DateTime? EnrollmentDate { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class CourseUpdateDto
+    {
+        public int CourseId { get; set; }
+    }
 }

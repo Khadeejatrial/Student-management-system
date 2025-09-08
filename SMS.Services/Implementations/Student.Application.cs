@@ -75,14 +75,20 @@ namespace SMS.Services.Implementations
             };
         }
 
-        
+
         public async Task<StudentDto> CreateStudentAsync(StudentDto student)
         {
+            // ✅ Validation
+            if (string.IsNullOrWhiteSpace(student.FirstName))
+                throw new ArgumentException("First name is required");
+            if (string.IsNullOrWhiteSpace(student.LastName))
+                throw new ArgumentException("Last name is required");
+            if (string.IsNullOrWhiteSpace(student.Email) || !student.Email.Contains("@gmail"))
+                throw new ArgumentException("Email must be a valid Gmail address");
 
             var entity = new Student
             {
-
-                FirstName = GetFirstName(student),
+                FirstName = student.FirstName,
                 LastName = student.LastName,
                 Email = student.Email,
                 DateOfBirth = student.DateOfBirth,
@@ -102,7 +108,7 @@ namespace SMS.Services.Implementations
             return student.FirstName;
         }
 
-        public async Task<StudentDto?> UpdateStudentAsync(int id, StudentDto student)
+        public async Task<StudentDto?> UpdateStudentAsync(int id, StudentUpdateDto student)
         {
             var entity = await _context.Students
                 .Include(s => s.Enrollments)
@@ -110,8 +116,6 @@ namespace SMS.Services.Implementations
                 .FirstOrDefaultAsync(s => s.StudentId == id);
 
             if (entity == null) return null;
-
-            
             entity.FirstName = student.FirstName;
             entity.LastName = student.LastName;
             entity.Email = student.Email;
@@ -119,42 +123,32 @@ namespace SMS.Services.Implementations
             entity.Gender = student.Gender;
             entity.UpdatedAt = DateTime.UtcNow;
 
-            
-            
-
             foreach (var e in student.Enrollments)
             {
-                var enrollment = entity.Enrollments.FirstOrDefault(en => en.StudentId == id && en.CourseId == e.CourseId);
+                var enrollment = entity.Enrollments.FirstOrDefault(en => en.EnrollmentId == e.EnrollmentId);
                 if (enrollment != null)
                 {
                     enrollment.EnrollmentDate = e.EnrollmentDate ?? enrollment.EnrollmentDate;
                     enrollment.IsActive = e.IsActive;
-                    
+                    if (e.Course != null)
+                    {
+                        enrollment.CourseId = e.Course.CourseId;
+                    }
                 }
                 else
                 {
-                    enrollment = new Enrollment
+                    entity.Enrollments.Add(new Enrollment
                     {
-
-                        CourseId = e.CourseId,
+                        CourseId = e.Course?.CourseId ?? 0,
                         StudentId = id,
-                        EnrollmentDate = DateTime.Now,
+                        EnrollmentDate = e.EnrollmentDate ?? DateTime.Now,
                         IsActive = e.IsActive
-                    };
-                    entity.Enrollments.Add(enrollment);
-
+                    });
                 }
-                    
-
-                
-
-                
             }
-
             await _context.SaveChangesAsync();
             return await GetStudentByIdAsync(entity.StudentId);
         }
-
 
         public async Task<StudentDto> CreateStudentWithCoursesAsync(StudentCreateDto dto)
         {
