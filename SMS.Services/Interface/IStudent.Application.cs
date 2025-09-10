@@ -12,5 +12,6 @@ namespace SMS.Services.Interface
         Task<StudentDto?> UpdateStudentAsync(int id, StudentUpdateDto student);
         Task<StudentDto> CreateStudentWithCoursesAsync(StudentCreateDto dto);
         Task<bool> DeleteStudentAsync(int id);
+
     }
 }

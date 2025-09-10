@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using MockQueryable.Moq;
 using SMS.Infrastructure;
 using SMS.Domain.Model;
 using SMS.Domain.DTOs;
@@ -17,31 +15,36 @@ namespace SMS.Tests.ServiceTests
     [TestClass]
     public class StudentApplicationTests
     {
-        private Mock<AppDbContext> _mockContext;
+        private AppDbContext _context;
         private IStudentApplication _studentService;
-        private List<Student> _students;
 
         [TestInitialize]
         public void Setup()
         {
-            _students = new List<Student>
-            {
-                new Student { StudentId = 1, FirstName = "Khadeeja", LastName = "Najeem", Email = "khadeeja@gmail.com", Gender = "F", DateOfBirth = new DateTime(2000,1,1), Enrollments = new List<Enrollment>() },
-                new Student { StudentId = 2, FirstName = "Judith", LastName = "Abraham", Email = "judith@gmail.com", Gender = "F", DateOfBirth = new DateTime(2001,2,2), Enrollments = new List<Enrollment>() }
-            };
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) 
+                .Options;
 
-            var mockDbSet = _students.BuildMockDbSet();
+            _context = new AppDbContext(options);
 
-            _mockContext = new Mock<AppDbContext>(new DbContextOptions<AppDbContext>());
-            _mockContext.Setup(c => c.Students).Returns(mockDbSet.Object);
-            _mockContext.Setup(c => c.SaveChangesAsync(default)).ReturnsAsync(1);
+            _context.Students.AddRange(
+                new Student { StudentId = 1, FirstName = "Khadeeja", LastName = "Najeem", Email = "khadeeja@gmail.com", Gender = "F", DateOfBirth = new DateTime(2000, 1, 1) },
+                new Student { StudentId = 2, FirstName = "Judith", LastName = "Abraham", Email = "judith@gmail.com", Gender = "F", DateOfBirth = new DateTime(2001, 2, 2) }
+            );
+            _context.SaveChanges();
 
-            _studentService = new StudentApplication(_mockContext.Object);
+            _studentService = new StudentApplication(_context);
         }
 
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
+        }
 
         [TestMethod]
-        public async Task GetAllStudentsAsync_ShouldReturnAllStudents()
+        public async Task GetAllStudentsAsync_ReturnAllStudents()
         {
             var result = await _studentService.GetAllStudentsAsync();
 
@@ -51,7 +54,7 @@ namespace SMS.Tests.ServiceTests
         }
 
         [TestMethod]
-        public async Task GetStudentByIdAsync_ShouldReturnStudent_WhenExists()
+        public async Task GetStudentByIdAsync_ReturnStudent_WhenExists()
         {
             var result = await _studentService.GetStudentByIdAsync(1);
 
@@ -60,7 +63,7 @@ namespace SMS.Tests.ServiceTests
         }
 
         [TestMethod]
-        public async Task GetStudentByIdAsync_ShouldReturnNull_WhenNotExists()
+        public async Task GetStudentByIdAsync_ReturnNull_WhenNotExists()
         {
             var result = await _studentService.GetStudentByIdAsync(99);
 
@@ -79,24 +82,12 @@ namespace SMS.Tests.ServiceTests
                 DateOfBirth = DateTime.UtcNow
             };
 
-            _mockContext.Setup(c => c.Students.Add(It.IsAny<Student>()))
-                .Callback<Student>(s =>
-                {
-                    s.StudentId = _students.Max(x => x.StudentId) + 1;
-                    _students.Add(s);
-                });
-
             var result = await _studentService.CreateStudentAsync(newStudent);
 
             Assert.IsNotNull(result);
             Assert.AreEqual("Nazrin", result.FirstName);
-            Assert.AreEqual("nazrin@gmail.com", result.Email);
-            Assert.IsTrue(_students.Any(s => s.Email == "nazrin@gmail.com"));
-            _mockContext.Verify(m => m.SaveChangesAsync(default), Times.AtLeastOnce);
+            Assert.AreEqual(3, _context.Students.Count());
         }
-
-
-
 
         [TestMethod]
         public async Task CreateStudentAsync_ShouldFail_WhenFirstNameMissing()
@@ -111,7 +102,7 @@ namespace SMS.Tests.ServiceTests
             var ex = await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
                 _studentService.CreateStudentAsync(newStudent));
 
-            Assert.AreEqual("First name cannot be empty", ex.Message);
+            Assert.AreEqual("First name is required", ex.Message);
         }
 
         [TestMethod]
@@ -127,7 +118,7 @@ namespace SMS.Tests.ServiceTests
             var ex = await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
                 _studentService.CreateStudentAsync(newStudent));
 
-            Assert.AreEqual("Last name cannot be empty", ex.Message);
+            Assert.AreEqual("Last name is required", ex.Message);
         }
 
         [TestMethod]
@@ -143,16 +134,14 @@ namespace SMS.Tests.ServiceTests
             var ex = await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
                 _studentService.CreateStudentAsync(newStudent));
 
-            Assert.AreEqual("Only Gmail addresses are allowed", ex.Message);
+            Assert.AreEqual("Email must be a valid Gmail address", ex.Message);
         }
-
 
         [TestMethod]
         public async Task UpdateStudentAsync_ShouldUpdate_WhenStudentExists()
         {
-            var updateDto = new StudentDto
+            var updateDto = new StudentUpdateDto
             {
-                StudentId = 1,
                 FirstName = "Updated",
                 LastName = "Name",
                 Email = "updated@gmail.com",
@@ -164,15 +153,16 @@ namespace SMS.Tests.ServiceTests
 
             Assert.IsNotNull(result);
             Assert.AreEqual("Updated", result.FirstName);
-            _mockContext.Verify(m => m.SaveChangesAsync(default), Times.AtLeastOnce);
+
+            var updatedEntity = await _context.Students.FindAsync(1);
+            Assert.AreEqual("Updated", updatedEntity.FirstName);
         }
 
         [TestMethod]
         public async Task UpdateStudentAsync_ShouldReturnNull_WhenNotExists()
         {
-            var updateDto = new StudentDto
+            var updateDto = new StudentUpdateDto
             {
-                StudentId = 99,
                 FirstName = "Ghost",
                 Email = "ghost@gmail.com"
             };
@@ -188,7 +178,7 @@ namespace SMS.Tests.ServiceTests
             var result = await _studentService.DeleteStudentAsync(1);
 
             Assert.IsTrue(result);
-            _mockContext.Verify(m => m.SaveChangesAsync(default), Times.AtLeastOnce);
+            Assert.AreEqual(1, _context.Students.Count());
         }
 
         [TestMethod]
@@ -197,7 +187,7 @@ namespace SMS.Tests.ServiceTests
             var result = await _studentService.DeleteStudentAsync(123);
 
             Assert.IsFalse(result);
-            _mockContext.Verify(m => m.SaveChangesAsync(default), Times.Never);
+            Assert.AreEqual(2, _context.Students.Count());
         }
     }
 }
